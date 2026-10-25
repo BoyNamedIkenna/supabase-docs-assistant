@@ -16,7 +16,9 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "dotenv": "^18.0.8",
-    "gray-matter": "^4.0.3"
+    "gray-matter": "^4.0.3",
+    "openai": "^7.43.0"
   }
 }
