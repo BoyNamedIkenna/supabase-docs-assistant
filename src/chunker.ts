@@ -3,6 +3,7 @@ import path from 'node:path'
 import matter from 'gray-matter'
 import { splitSections, nextFence, type Fence } from './sections'
 import { cleanLine, cleanSectionLines, stripMdxComments } from './clean'
+import { resolveIncludes } from './includes'
 
 export const MAX_TOKENS = 500 // sections bigger than this get split
 export const MIN_TOKENS = 100 // a heading with less text than this merges into its first subsection
@@ -127,10 +128,18 @@ export function chunkFile(filePath: string, guidesRoot: string): Chunk[] {
   const title = String(data.title ?? path.basename(rel))
   const pageUrl = `https://supabase.com/docs/guides/${rel}`
 
+  // 0. fill in shared partials and code samples, then drop comments
+  const fullText = stripMdxComments(
+    resolveIncludes(stripMdxComments(content), {
+      partialsRoot: path.resolve(guidesRoot, '..', '_partials'),
+      examplesRoot: path.resolve(guidesRoot, '..', '..', '..', '..', 'examples'),
+    }),
+  )
+
   // 1. one piece per section
   const pieces: Piece[] = []
   const stack: string[] = []
-  for (const section of splitSections(stripMdxComments(content), true)) {
+  for (const section of splitSections(fullText, true)) {
     let headingPath = [title]
     let headingLine = ''
     let anchor = ''

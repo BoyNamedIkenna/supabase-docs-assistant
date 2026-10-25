@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { chunkFile, MAX_TOKENS } from './chunker'
 import { componentCounts } from './clean'
+import { includeStats } from './includes'
 import { nextFence, type Fence } from './sections'
 
 function walk(dir: string): string[] {
@@ -21,7 +22,7 @@ function leftoverTags(content: string): string[] {
     fence = nextFence(fence, line)
     if (!(wasOutside && fence === null)) continue
     const noInlineCode = line.replace(/`[^`]*`/g, '')
-    if (/<\/?\$?[A-Z][A-Za-z0-9]*(\s|>|\/|$)/.test(noInlineCode) || /\{\/\*|\*\/\}/.test(noInlineCode)) found.push(line.trim())
+    if (/<\/?\$?[A-Z][A-Za-z0-9]*(\s|>|\/|$)/.test(noInlineCode) || /\{\/\*|\*\/\}|\{\{/.test(noInlineCode)) found.push(line.trim())
   }
   return found
 }
@@ -45,6 +46,10 @@ console.log(`files: ${files.length}   chunks: ${chunks.length}`)
 console.log(`tokens per chunk: min ${t[0]}, median ${t[Math.floor(t.length / 2)]}, max ${t[t.length - 1]}`)
 const counts = [...componentCounts.entries()].sort((a, b) => b[1] - a[1])
 console.log(`components found: ${counts.map(([n, c]) => `${n}(${c})`).join(', ') || 'none'}`)
+
+console.log(`partials filled in: ${includeStats.partials}   code samples filled in: ${includeStats.codeSamples}`)
+console.log(`includes we could not find: ${includeStats.missing.size}`)
+;[...includeStats.missing.entries()].slice(0, 10).forEach(([n, c]) => console.log(`  ${c}x  ${n}`))
 
 const small = chunks.filter((c) => c.tokens < 30)
 console.log(`\nchunks under 30 tokens: ${small.length}`)
