@@ -3,3 +3,4 @@ node_modules
 source/
 chunks.json
 learing/
+.embedding-cache.jsonl

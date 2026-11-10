@@ -1,0 +1,14 @@
+[
+  { "question": "How do I let users read only their own rows?", "expect": ["database/postgres/row-level-security"] },
+  { "question": "Why is my RLS policy slow?", "expect": ["database/postgres/row-level-security-performance", "database/postgres/row-level-security"] },
+  { "question": "What does error 42501 mean when a request fails?", "expect": ["database/postgres/row-level-security"] },
+  { "question": "How do I sign users in without an email or password?", "expect": ["auth/auth-anonymous"] },
+  { "question": "How do I send a magic link login email?", "expect": ["auth/auth-email-passwordless"] },
+  { "question": "How can I see the query plan of an API request?", "expect": ["database/postgres/row-level-security-performance"] },
+  { "question": "pgrst.db_plan_enabled", "expect": ["https://supabase.com/docs/guides/database/postgres/row-level-security-performance#measure-through-the-data-api"] },
+  { "question": "How do I use the Supabase CLI to generate types for my database?", "expect": ["database/postgres/generating-types"] },
+  {"question": "I want to use supabase as a backend server for my website, is this possible?", "expect": ["guides/using-supabase-as-a-backend"] },
+  {"question": "I am creating a authentication app with supabase, is this possible?", "expect": ["/guides/auth/auth-mfa/totp"] },
+  {"question": "How do I create custom emails with supabase", "expect": ["auth/auth-email-templates"] },
+  {"question": "How do I use supabase with nextjs", "expect": ["guides/using-supabase-with-nextjs"] }
+]

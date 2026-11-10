@@ -17,6 +17,7 @@ const TAG_START = new RegExp(`^\\s*<(${NAME})\\b`)
 const INLINE_TAG = new RegExp(`<\\/?(${NAME})\\b[^>]*>`, 'g')
 const SHOW_CLOSE = /^\s*<\/\$Show>\s*$/
 const MAX_TAG_LINES = 30 // safety: give up on a "multi-line tag" that never closes
+const TWOSLASH_MARKER = /^\s*\/\/\s*---cut(?:-[a-z]+)?---\s*$/
 
 // Text worth keeping from a tag's attributes:
 //   <$Show if="sdk:dart">  ->  [sdk:dart]
@@ -60,9 +61,9 @@ export function cleanLine(line: string): string {
       i % 2 === 1
         ? part
         : part.replace(INLINE_TAG, (_m, name) => {
-            seen(name)
-            return ''
-          }),
+          seen(name)
+          return ''
+        }),
     )
     .join('')
   return l
@@ -86,7 +87,7 @@ export function cleanSectionLines(lines: string[]): string[] {
     const wasOutside = fence === null
     fence = nextFence(fence, line)
     if (!(wasOutside && fence === null)) {
-      out.push(line) // inside a code block (or a fence line)
+      if (!TWOSLASH_MARKER.test(line)) out.push(line) // keep code as is, except doc-tool marker lines
       continue
     }
 
