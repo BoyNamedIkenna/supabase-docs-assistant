@@ -11,6 +11,7 @@ export interface Deps {
   search: (question: string, embedding: number[], count: number) => Promise<Match[]>
   complete: (system: string, user: string, role: 'answer' | 'rerank') => Promise<string>
   useRerank: boolean
+  ping?: () => Promise<void> // a cheap database query, used by the deep health check
 }
 
 export interface SourceInfo {

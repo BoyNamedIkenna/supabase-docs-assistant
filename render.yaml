@@ -1,0 +1,36 @@
+services:
+  # The API: Express server that retrieves, re-ranks and answers
+  - type: web
+    name: supabase-docs-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: PORT
+        value: 10000
+      - key: DAILY_LIMIT
+        value: 300
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: ALLOWED_ORIGIN # the address of the page below, e.g. https://supabase-docs-assistant.onrender.com
+        sync: false
+
+  # The page: React app built into static files
+  - type: web
+    name: supabase-docs-assistant
+    runtime: static
+    buildCommand: cd web && npm install && npm run build
+    staticPublishPath: ./web/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: VITE_API_URL # the address of the API above, e.g. https://supabase-docs-api.onrender.com
+        sync: false

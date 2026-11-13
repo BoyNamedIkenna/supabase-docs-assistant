@@ -18,6 +18,10 @@ export function createDeps(): Deps {
 
   return {
     useRerank: process.env.RERANK !== 'off', // put RERANK=off in .env to skip the re-ranking step
+    ping: async () => {
+      const { error } = await supabase.from('doc_chunks').select('id').limit(1)
+      if (error) throw new Error(error.message)
+    },
     embed: async (text) => {
       const res = await openai.embeddings.create({ model: 'text-embedding-3-small', input: text })
       return res.data[0].embedding

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { LoaderCircle, Search, TriangleAlert } from 'lucide-react'
 import { askQuestion } from './lib/api'
@@ -11,6 +11,20 @@ const EXAMPLES = [
   'Why is my RLS policy slow?',
   'How do I send a magic link login email?',
 ]
+
+// Free hosting puts an idle server to sleep, and the first request wakes it up. Say so instead of leaving a spinner.
+function SlowNotice() {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setShow(true), 6000)
+    return () => clearTimeout(timer)
+  }, [])
+  return show ? (
+    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+      Still working… this demo runs on free hosting, so the first question after a quiet period can take up to a minute.
+    </p>
+  ) : null
+}
 
 type State =
   | { kind: 'idle' }
@@ -97,9 +111,12 @@ export default function App() {
 
         <div className="mt-10" aria-live="polite">
           {state.kind === 'loading' && (
-            <p className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> Searching the docs…
-            </p>
+            <div>
+              <p className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> Searching the docs…
+              </p>
+              <SlowNotice key={state.question} />
+            </div>
           )}
 
           {state.kind === 'error' && (

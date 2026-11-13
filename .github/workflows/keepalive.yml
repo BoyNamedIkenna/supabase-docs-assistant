@@ -1,0 +1,22 @@
+name: keep-alive
+
+# Once a day: wake the API and run one tiny database query, so the free Supabase project
+# (paused after a week of low activity) and the demo stay usable.
+on:
+  schedule:
+    - cron: '17 6 * * *' # every day at 06:17 UTC
+  workflow_dispatch: # lets you run it by hand from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the API
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "Set the API_URL repository variable (Settings > Secrets and variables > Actions > Variables)."
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 120 --retry 2 --retry-delay 10 "$API_URL/api/health?deep=1"
