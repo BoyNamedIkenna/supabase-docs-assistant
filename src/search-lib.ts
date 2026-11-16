@@ -25,3 +25,18 @@ export function dedupe(rows: Match[], n: number): Match[] {
 
 // A chunk id looks like 'auth/auth-anonymous::3'. The part before :: is the page.
 export const fileOf = (id: string) => id.split('::')[0]
+
+// Keep the best-ranked items, but at most `perPage` from any one page, up to `limit` in total.
+export function capPerPage<T extends { match: Match }>(items: T[], perPage: number, limit: number): T[] {
+  const counts = new Map<string, number>()
+  const out: T[] = []
+  for (const item of items) {
+    const page = fileOf(item.match.id)
+    const n = counts.get(page) ?? 0
+    if (n >= perPage) continue
+    counts.set(page, n + 1)
+    out.push(item)
+    if (out.length === limit) break
+  }
+  return out
+}

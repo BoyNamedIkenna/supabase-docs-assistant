@@ -12,10 +12,8 @@ create table if not exists doc_chunks (
   embedding vector(1536),           -- text-embedding-3-small output size
   -- keyword index. Dots become word breaks, so "db_plan_enabled" and "uid"
   -- can find "pgrst.db_plan_enabled" and "auth.uid()".
-  fts tsvector generated always as (to_tsvector('english', translate(content, '.', ' '))) stored
 );
 
-create index if not exists doc_chunks_fts_idx on doc_chunks using gin (fts);
 
 -- Only the server's secret key should read this table.
 alter table doc_chunks enable row level security;
@@ -36,41 +34,3 @@ as $$
   limit match_count;
 $$;
 
--- Hybrid search: vector ranking + keyword ranking, merged by reciprocal rank fusion
-create or replace function hybrid_match_chunks(
-  query_text text,
-  query_embedding vector(1536),
-  match_count int default 5,
-  full_text_weight float default 1.0,
-  semantic_weight float default 1.0,
-  rrf_k int default 50
-)
-returns table (id text, title text, heading_path text[], url text, content text, score float)
-language sql stable
-as $$
-  with full_text as (
-    select d.id,
-           row_number() over (
-             order by ts_rank_cd(d.fts, websearch_to_tsquery('english', translate(query_text, '.', ' '))) desc
-           ) as rank_ix
-    from doc_chunks d
-    where d.fts @@ websearch_to_tsquery('english', translate(query_text, '.', ' '))
-    order by rank_ix
-    limit match_count * 4
-  ),
-  semantic as (
-    select d.id,
-           row_number() over (order by d.embedding <=> query_embedding) as rank_ix
-    from doc_chunks d
-    order by rank_ix
-    limit match_count * 4
-  )
-  select c.id, c.title, c.heading_path, c.url, c.content,
-         (coalesce(1.0 / (rrf_k + full_text.rank_ix), 0.0) * full_text_weight
-        + coalesce(1.0 / (rrf_k + semantic.rank_ix), 0.0) * semantic_weight)::float as score
-  from full_text
-  full outer join semantic on full_text.id = semantic.id
-  join doc_chunks c on c.id = coalesce(full_text.id, semantic.id)
-  order by score desc
-  limit match_count;
-$$;

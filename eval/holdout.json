@@ -1,0 +1,13 @@
+[
+    { "question": "How can I automatically delete all of a user's posts when their account is deleted?", "expect": ["guides/database/postgres/cascade-deletes"] },
+    { "question": "Why doesn't my user stay logged in when I refresh the page using SSR in Next.js?", "expect": ["guides/auth/server-side/nextjs", "guides/auth/server-side/creating-a-client"] },
+    { "question": "AuthApiError: invalid claim: missing sub claim", "expect": ["guides/auth/troubleshooting", "guides/auth/custom-jwts"] },
+    { "question": "How do I use supabase.auth.updateUser() to let a user change their password?", "expect": ["reference/javascript/auth-updateuser", "guides/auth/managing-passwords"] },
+    { "question": "What is the syntax for doing a full-text search query in the javascript client?", "expect": ["reference/javascript/textsearch", "guides/database/full-text-search"] },
+    { "question": "I want to add a JSON column to store arbitrary settings, how do I query inside the JSON object in JS?", "expect": ["guides/database/json"] },
+    { "question": "How do I add Cloudflare Turnstile or reCAPTCHA to my Supabase login form to stop bots?", "expect": ["guides/auth/auth-captcha"] },
+    { "question": "How do I chain .eq() and .in() filters together in a single database query?", "expect": ["reference/javascript/using-filters"] },
+    { "question": "Transaction mode does not support query pipelining", "expect": ["guides/database/connecting-to-postgres"] },
+    { "question": "How do I set up a one-time password (OTP) login via SMS?", "expect": ["guides/auth/phone-login"] },
+    { "question": "My auth works locally, but in production users aren't sent back to my site. How do I fix the redirect URL?", "expect": ["guides/auth/redirect-urls", "guides/auth/concepts/redirect-urls"] }
+]

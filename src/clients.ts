@@ -27,8 +27,7 @@ export function createDeps(): Deps {
       return res.data[0].embedding
     },
     search: async (question, embedding, count) => {
-      const { data, error } = await supabase.rpc('hybrid_match_chunks', {
-        query_text: question,
+      const { data, error } = await supabase.rpc('match_chunks', {
         query_embedding: embedding,
         match_count: count,
       })

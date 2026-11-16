@@ -1,20 +1,20 @@
-import { dedupe, fileOf, type Match } from './search-lib'
+import { fileOf, type Match } from './search-lib'
 
-export type Mode = 'hybrid' | 'vector'
+// vector: plain vector search. vrerank: vector search, then the model re-ranks.
+// rerank: the app's current search (hybrid), then the model re-ranks.
+export type Mode = 'vector' | 'vrerank' 
+export const MODES: Mode[] = ['vector', 'vrerank',]
+export const MODE_LABEL: Record<Mode, string> = {
+  vector: 'vector',
+  vrerank: 'vector+rerank',
+}
+
 export interface Case { question: string; expect: string[] }
-export interface CaseResult { question: string; expect: string[]; ranks: Record<Mode, number | null>; top: string[] }
-
-// ['a','a','a','b'] -> 'a (x3), b'  so five chunks from one page read as one entry
-export function compact(files: string[]): string {
-  const out: string[] = []
-  for (const f of files) {
-    const last = out[out.length - 1]
-    const m = last?.match(/^(.*) \(x(\d+)\)$/)
-    if (last === f) out[out.length - 1] = `${f} (x2)`
-    else if (m && m[1] === f) out[out.length - 1] = `${f} (x${Number(m[2]) + 1})`
-    else out.push(f)
-  }
-  return out.join(', ')
+export interface CaseResult {
+  question: string
+  expect: string[]
+  ranks: Record<Mode, number | null> // position of the first correct page among the sources the model would see
+  pages: Record<Mode, string[]> // the pages those sources come from, best first
 }
 
 // Accepts 'auth/auth-anonymous', '/guides/auth/auth-anonymous', or a full docs URL (with or
@@ -48,25 +48,45 @@ export function rankOfFirstHit(files: string[], expect: string[]): number | null
 export function summarize(ranks: (number | null)[]) {
   const n = ranks.length
   const within = (k: number) => ranks.filter((r) => r !== null && r <= k).length
-  const mrr = ranks.reduce<number>((sum, r) => sum + (r ? 1 / r : 0), 0) / n
-  return { n, top1: within(1), top3: within(3), top5: within(5), mrr }
+  const mrr = n === 0 ? 0 : ranks.reduce<number>((sum, r) => sum + (r ? 1 / r : 0), 0) / n
+  return { n, found: ranks.filter((r) => r !== null).length, top1: within(1), top3: within(3), mrr }
 }
 
+// Which questions gained or lost the right page when going from one mode to another.
+export function movement(results: CaseResult[], from: Mode, to: Mode) {
+  const gained = results.filter((r) => r.ranks[from] === null && r.ranks[to] !== null).map((r) => r.question)
+  const lost = results.filter((r) => r.ranks[from] !== null && r.ranks[to] === null).map((r) => r.question)
+  return { gained, lost }
+}
+
+// ['a','a','a','b'] -> 'a (x3), b'  so five chunks from one page read as one entry
+export function compact(files: string[]): string {
+  const out: string[] = []
+  for (const f of files) {
+    const last = out[out.length - 1]
+    const m = last?.match(/^(.*) \(x(\d+)\)$/)
+    if (last === f) out[out.length - 1] = `${f} (x2)`
+    else if (m && m[1] === f) out[out.length - 1] = `${f} (x${Number(m[2]) + 1})`
+    else out.push(f)
+  }
+  return out.join(', ')
+}
+
+// `sourcesFor` returns the sources the answering model would be given for a question in a mode.
 export async function evaluate(
   cases: Case[],
-  search: (question: string, mode: Mode) => Promise<Match[]>,
+  sourcesFor: (question: string, mode: Mode) => Promise<Match[]>,
 ): Promise<CaseResult[]> {
   const results: CaseResult[] = []
   for (const c of cases) {
     const ranks = {} as Record<Mode, number | null>
-    let top: string[] = []
-    for (const mode of ['hybrid', 'vector'] as const) {
-      const rows = dedupe(await search(c.question, mode), 5)
-      const files = rows.map((r) => fileOf(r.id))
+    const pages = {} as Record<Mode, string[]>
+    for (const mode of MODES) {
+      const files = (await sourcesFor(c.question, mode)).map((m) => fileOf(m.id))
+      pages[mode] = files
       ranks[mode] = rankOfFirstHit(files, c.expect)
-      if (mode === 'hybrid') top = files
     }
-        results.push({ question: c.question, expect: c.expect.map(normalizePage), ranks, top })
+    results.push({ question: c.question, expect: c.expect.map(normalizePage), ranks, pages })
   }
   return results
 }

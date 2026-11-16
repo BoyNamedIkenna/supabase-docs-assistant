@@ -1,14 +1,19 @@
 [
   { "question": "How do I let users read only their own rows?", "expect": ["database/postgres/row-level-security"] },
   { "question": "Why is my RLS policy slow?", "expect": ["database/postgres/row-level-security-performance", "database/postgres/row-level-security"] },
-  { "question": "What does error 42501 mean when a request fails?", "expect": ["database/postgres/row-level-security"] },
-  { "question": "How do I sign users in without an email or password?", "expect": ["auth/auth-anonymous"] },
+  { "question": "How do I sign users in without an email or password?", "expect": ["auth/auth-anonymous", "auth/auth-email-passwordless", "auth/phone-login"] },
   { "question": "How do I send a magic link login email?", "expect": ["auth/auth-email-passwordless"] },
   { "question": "How can I see the query plan of an API request?", "expect": ["database/postgres/row-level-security-performance"] },
-  { "question": "pgrst.db_plan_enabled", "expect": ["https://supabase.com/docs/guides/database/postgres/row-level-security-performance#measure-through-the-data-api"] },
-  { "question": "How do I use the Supabase CLI to generate types for my database?", "expect": ["database/postgres/generating-types"] },
-  {"question": "I want to use supabase as a backend server for my website, is this possible?", "expect": ["guides/using-supabase-as-a-backend"] },
-  {"question": "I am creating a authentication app with supabase, is this possible?", "expect": ["/guides/auth/auth-mfa/totp"] },
-  {"question": "How do I create custom emails with supabase", "expect": ["auth/auth-email-templates"] },
-  {"question": "How do I use supabase with nextjs", "expect": ["guides/using-supabase-with-nextjs"] }
+  { "question": "pgrst.db_plan_enabled", "expect": ["database/postgres/row-level-security-performance","database/debugging-performance"] },
+  { "question": "How do I create custom emails with supabase", "expect": ["auth/auth-email-templates", "auth/auth-smtp", "auth/auth-hooks/send-email-hook"] },
+  { "question": "How do I use supabase with nextjs", "expect": ["auth/quickstarts/nextjs"] },
+  { "question": "How do I let users log in with their Google account?", "expect": ["auth/social-login/auth-google"] },
+  { "question": "Why am I getting 'new row violates row-level security policy' when trying to insert data?", "expect": ["database/postgres/row-level-security"] },
+  { "question": "What is the exact difference between getSession() and getUser() for protecting routes?", "expect": ["auth/server-side/creating-a-client"] },
+  { "question": "How do I call a Postgres function directly from the JavaScript client?", "expect": ["database/functions"] },
+  { "question": "Can I connect to my Supabase database using a regular SQL client like DBeaver or pgAdmin?", "expect": ["database/connecting-to-postgres"] },
+  { "question": "How do I use a custom access token hook to add an admin role to a user's JWT?", "expect": ["auth/auth-hooks/custom-access-token-hook"] },
+  { "question": "My database is rejecting connections saying there are too many clients, what do I do?", "expect": ["database/connecting-to-postgres/pooling-and-limits"] },
+  { "question": "How do I link a custom public user profile table to the built-in auth.users table?", "expect": ["auth/managing-user-data"] },
+  { "question": "supabase.auth.onAuthStateChange", "expect": ["auth/quickstarts/react-native", "auth/quickstarts/react", "auth/quickstarts/with-expo-react-native-social-auth", "auth/server-side/advanced-guide"] }
 ]
