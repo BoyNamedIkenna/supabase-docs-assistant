@@ -5,7 +5,7 @@ import { splitSections, nextFence, type Fence } from './sections'
 import { cleanLine, cleanSectionLines, stripMdxComments } from './clean'
 import { resolveIncludes } from './includes'
 
-export const MAX_TOKENS = 500 // sections bigger than this get split
+export const MAX_TOKENS = 500
 export const MIN_TOKENS = 100 // a heading with less text than this merges into its first subsection
 
 export interface Chunk {
@@ -25,7 +25,6 @@ export const estimateTokens = (t: string) => Math.ceil(t.length / 4)
 const slugify = (s: string) =>
   s.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-')
 
-// true if `child` sits somewhere below `parent` in the heading tree
 function isChild(parent: string[], child: string[]): boolean {
   return child.length > parent.length && parent.every((h, i) => h === child[i])
 }
@@ -41,6 +40,7 @@ const hasBodyText = (text: string) => {
   const hasCode = /^\s*(```|~~~)/m.test(body)
   return body.replace(/[^A-Za-z0-9]/g, '').length >= (hasCode ? 5 : 30)
 }
+
 // A heading with almost no text, followed by its own first subsection,
 // gets merged into that subsection. The merged piece keeps the subsection's
 // (more specific) heading path and anchor.
@@ -85,7 +85,7 @@ const isTableBlock = (block: string) => {
   )
 }
 
-// Splits a big table into several smaller tables, repeating the header row in each.
+// Each part repeats the header row, so every piece of a big table stays readable on its own.
 function splitTable(block: string): string[] {
   const lines = block.split('\n')
   const header = lines.slice(0, 2).join('\n')
@@ -102,7 +102,6 @@ function splitTable(block: string): string[] {
   return parts
 }
 
-// Packs blocks together until adding the next one would pass MAX_TOKENS.
 // A single block bigger than MAX_TOKENS (e.g. a huge code block) stays whole.
 function splitOversized(content: string): string[] {
   const parts: string[] = []
@@ -128,7 +127,7 @@ export function chunkFile(filePath: string, guidesRoot: string): Chunk[] {
   const title = String(data.title ?? path.basename(rel))
   const pageUrl = `https://supabase.com/docs/guides/${rel}`
 
-  // 0. fill in shared partials and code samples, then drop comments
+  // shared partials and code samples are inlined; comments are stripped before and after
   const fullText = stripMdxComments(
     resolveIncludes(stripMdxComments(content), {
       partialsRoot: path.resolve(guidesRoot, '..', '_partials'),
@@ -136,7 +135,6 @@ export function chunkFile(filePath: string, guidesRoot: string): Chunk[] {
     }),
   )
 
-  // 1. one piece per section
   const pieces: Piece[] = []
   const stack: string[] = []
   for (const section of splitSections(fullText, true)) {
@@ -156,7 +154,6 @@ export function chunkFile(filePath: string, guidesRoot: string): Chunk[] {
     if (text !== '') pieces.push({ headingPath, anchor, content: text })
   }
 
-  // 2. merge short parents, 3. split oversized pieces, 4. build the chunk objects
   const chunks: Chunk[] = []
   for (const piece of mergeShortParents(pieces)) {
     const parts = estimateTokens(piece.content) > MAX_TOKENS ? splitOversized(piece.content) : [piece.content]

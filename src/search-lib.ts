@@ -4,8 +4,7 @@ export interface Match {
   heading_path: string[]
   url: string
   content: string
-  similarity?: number // vector-only search
-  score?: number // hybrid search (rank-fusion score, only meaningful for ordering)
+  similarity?: number
 }
 
 // Shared partials put the same text on many pages, so one search can return several

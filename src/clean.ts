@@ -130,7 +130,7 @@ export function stripMdxComments(content: string): string {
   for (const line of content.split(/\r?\n/)) {
     if (inComment) {
       const end = line.indexOf('*/}')
-      if (end === -1) continue // still inside the comment: drop the line
+      if (end === -1) continue
       inComment = false
       const rest = line.slice(end + 3)
       if (rest.trim() !== '') out.push(rest)
@@ -140,7 +140,7 @@ export function stripMdxComments(content: string): string {
     const wasOutside = fence === null
     fence = nextFence(fence, line)
     if (!(wasOutside && fence === null)) {
-      out.push(line) // code block or fence line
+      out.push(line)
       continue
     }
 

@@ -7,7 +7,7 @@ export function createLimiter(opts: { max: number; windowMs: number; now?: () =>
     hit(key: string): { allowed: boolean; retryAfterSec: number } {
       const t = now()
       if (hits.size > 5000) {
-        // tidy up: forget keys with no recent requests
+        // keeps memory bounded: forget keys with no recent requests
         for (const [k, times] of hits) if (times.every((x) => t - x >= opts.windowMs)) hits.delete(k)
       }
       const recent = (hits.get(key) ?? []).filter((x) => t - x < opts.windowMs)

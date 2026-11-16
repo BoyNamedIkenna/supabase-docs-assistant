@@ -9,7 +9,6 @@ function need(name: string): string {
   return value
 }
 
-// The real connections: OpenAI for embeddings and answers, Supabase for search.
 export function createDeps(): Deps {
   const openai = new OpenAI({ apiKey: need('OPENAI_API_KEY'), maxRetries: 5 })
   const supabase = createClient(need('SUPABASE_URL'), need('SUPABASE_SECRET_KEY'))
@@ -17,7 +16,7 @@ export function createDeps(): Deps {
   const rerankModel = process.env.RERANK_MODEL ?? chatModel
 
   return {
-    useRerank: process.env.RERANK !== 'off', // put RERANK=off in .env to skip the re-ranking step
+    useRerank: process.env.RERANK !== 'off',
     ping: async () => {
       const { error } = await supabase.from('doc_chunks').select('id').limit(1)
       if (error) throw new Error(error.message)

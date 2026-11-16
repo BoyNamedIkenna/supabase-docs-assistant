@@ -56,7 +56,7 @@ export async function rerank(
 
   const chosen = order.slice(0, k)
   for (let n = 1; chosen.length < Math.min(MIN_KEEP, k) && n <= candidates.length; n++) {
-    if (!chosen.includes(n)) chosen.push(n) // top up from the original order
+    if (!chosen.includes(n)) chosen.push(n)
   }
   return { ranked: chosen.map((n) => ({ match: candidates[n - 1], from: n })), fallback: null }
 }

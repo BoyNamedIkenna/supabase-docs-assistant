@@ -1,5 +1,5 @@
 [
-  { "question": "How do I let users read only their own rows?", "expect": ["database/postgres/row-level-security"] },
+  { "question": "How do I let users read only their own rows?", "expect": ["database/postgres/row-level-security" ] },
   { "question": "Why is my RLS policy slow?", "expect": ["database/postgres/row-level-security-performance", "database/postgres/row-level-security"] },
   { "question": "How do I sign users in without an email or password?", "expect": ["auth/auth-anonymous", "auth/auth-email-passwordless", "auth/phone-login"] },
   { "question": "How do I send a magic link login email?", "expect": ["auth/auth-email-passwordless"] },

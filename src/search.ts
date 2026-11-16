@@ -39,7 +39,7 @@ async function main() {
   console.log(`\nQuestion: ${question}   (vector, top ${top})\n`)
 
   dedupe(data as Match[], top).forEach((r, i) => {
-    const score = (r.similarity ?? r.score ?? 0).toFixed(4)
+    const score = (r.similarity ?? 0).toFixed(4)
     if (top > 5) {
       console.log(`${String(i + 1).padStart(3)}. [${score}] ${r.heading_path.join(' > ')}`)
     } else {

@@ -1,6 +1,5 @@
 [
-  { "question": "How do I use the Supabase CLI to generate types for my database?", "reason": "The guide is in the REST API section (guides/api/rest/generating-types), which is not indexed." },
-  { "question": "I want to use supabase as a backend server for my website, is this possible?", "reason": "Broad overview question; the answer lives in sections that are not indexed." },
-    { "question": "What does error 42501 mean when a request fails?", "expect": ["database/postgres/row-level-security"] },
-
+  { "question": "How do I upload a user profile picture to a private bucket?", "expect": ["storage/uploads", "storage/buckets"] },
+  { "question": "How can I show an indicator on the screen when another user is currently typing?", "expect": ["realtime/presence"] },
+  { "question": "What is the maximum memory limit for deploying and running an Edge Function?", "expect": ["functions/limits"] }
 ]

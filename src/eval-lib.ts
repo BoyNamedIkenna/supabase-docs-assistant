@@ -1,9 +1,8 @@
 import { fileOf, type Match } from './search-lib'
 
-// vector: plain vector search. vrerank: vector search, then the model re-ranks.
-// rerank: the app's current search (hybrid), then the model re-ranks.
-export type Mode = 'vector' | 'vrerank' 
-export const MODES: Mode[] = ['vector', 'vrerank',]
+// vector: vector search only. vrerank: vector search, then the model re-ranks (what the app does).
+export type Mode = 'vector' | 'vrerank'
+export const MODES: Mode[] = ['vector', 'vrerank']
 export const MODE_LABEL: Record<Mode, string> = {
   vector: 'vector',
   vrerank: 'vector+rerank',
@@ -52,7 +51,6 @@ export function summarize(ranks: (number | null)[]) {
   return { n, found: ranks.filter((r) => r !== null).length, top1: within(1), top3: within(3), mrr }
 }
 
-// Which questions gained or lost the right page when going from one mode to another.
 export function movement(results: CaseResult[], from: Mode, to: Mode) {
   const gained = results.filter((r) => r.ranks[from] === null && r.ranks[to] !== null).map((r) => r.question)
   const lost = results.filter((r) => r.ranks[from] !== null && r.ranks[to] === null).map((r) => r.question)
@@ -72,7 +70,6 @@ export function compact(files: string[]): string {
   return out.join(', ')
 }
 
-// `sourcesFor` returns the sources the answering model would be given for a question in a mode.
 export async function evaluate(
   cases: Case[],
   sourcesFor: (question: string, mode: Mode) => Promise<Match[]>,

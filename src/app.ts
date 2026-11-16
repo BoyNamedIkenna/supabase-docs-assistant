@@ -16,13 +16,12 @@ export function createApp(
   app.use(express.json({ limit: '10kb' }))
 
   const limiter = createLimiter({ max: opts.maxPerMinute ?? 10, windowMs: 60_000, now: opts.now })
-  // A ceiling on total questions per day, across all visitors, so a flood from many addresses cannot run up the bill.
-  // It lives in memory, so it also resets when the server restarts: your OpenAI spending limit is the real backstop.
+  // Caps total questions per day across all visitors. It lives in memory and resets on restart,
+  // so the OpenAI spending limit is the real backstop.
   const daily = createLimiter({ max: opts.dailyLimit ?? 300, windowMs: 86_400_000, now: opts.now })
   const logError = opts.logError ?? console.error
 
-  // /api/health is a plain "the server is up". /api/health?deep=1 also touches the database,
-  // which a scheduled ping can use to keep a free Supabase project from being paused.
+  // ?deep=1 also queries the database, so a scheduled ping keeps a free Supabase project from pausing.
   app.get('/api/health', async (req, res) => {
     if (req.query.deep !== '1' || !deps.ping) {
       res.json({ ok: true })
@@ -38,7 +37,6 @@ export function createApp(
   })
 
   app.post('/api/ask', async (req, res) => {
-    // Every question costs money, so limit how fast one visitor can ask.
     const limit = limiter.hit(req.ip ?? 'unknown')
     if (!limit.allowed) {
       res.setHeader('Retry-After', String(limit.retryAfterSec))

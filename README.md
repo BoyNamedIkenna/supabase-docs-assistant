@@ -11,7 +11,7 @@ Ask a question about **Supabase Auth or Database** and get a short answer built 
 
 - Answers questions about the Supabase **Auth** and **Database** guides, with `[1]`-style citations that link to the exact doc section.
 - Says *"I couldn't find that in the docs"* when the retrieved sources don't contain the answer.
-- Finds both meaning ("why is my policy slow?") and exact terms (`pgrst.db_plan_enabled`, `42501`) using hybrid search.
+- Finds relevant sections by meaning (vector search), then has a model re-rank them so the best ones reach the answer.
 - Shows which sources were used and which were only considered.
 
 ## How it works
@@ -22,11 +22,11 @@ flowchart LR
     A["Supabase docs (MDX files)"] --> B["Clean and resolve partials"]
     B --> C["Chunk by headings"]
     C --> D["Embed with OpenAI"]
-    D --> E[("Supabase Postgres: pgvector and full-text")]
+    D --> E[("Supabase Postgres: pgvector")]
   end
   subgraph Answering["Answering (every question)"]
-    Q["Question"] --> R["Hybrid search: 30 candidates"]
-    R --> S["LLM re-rank: best 8"]
+    Q["Question"] --> R["Vector search: 30 candidates"]
+    R --> S["LLM re-rank: best 8, max 3 per page"]
     S --> T["Answer from sources only, with citations"]
     T --> U["React page"]
   end
@@ -35,9 +35,9 @@ flowchart LR
 
 1. **Prepare the docs.** About 180 MDX pages (Auth and Database guides) from the public `supabase/supabase` repository, checked out in October 2026. MDX components, comments and link URLs are cleaned; shared **partials** and **code samples** that the live site pulls in are resolved and inlined.
 2. **Chunk.** Pages are split along their headings. Every chunk keeps its heading path and a deep link to its section. Code blocks are never cut, large tables are split by rows with the header repeated, and tiny parent headings merge into their first subsection.
-3. **Index.** Chunks are embedded with `text-embedding-3-small` and stored in Supabase Postgres (`pgvector`) next to a generated full-text column.
-4. **Retrieve.** A SQL function runs vector search and keyword search together and merges the two rankings with reciprocal rank fusion. Identical chunks (from shared partials) are collapsed.
-5. **Re-rank.** A model reads short excerpts of the top 30 candidates and picks the 8 that best answer the question. If this step fails, the original order is used.
+3. **Index.** Chunks are embedded with `text-embedding-3-small` and stored in Supabase Postgres (`pgvector`).
+4. **Retrieve.** A SQL function returns the 30 chunks closest to the question by vector similarity. Identical chunks (from shared partials) are collapsed.
+5. **Re-rank.** A model reads short excerpts of the 30 candidates and picks the 12 that best answer the question. No more than 3 chunks from any one page are kept, so a single page can't crowd out the others, and the best 8 remaining go to the answering model. If this step fails, the original order is used (the 3-per-page limit still applies).
 6. **Answer.** A model writes the answer from those 8 sources only, cites them by number, and replies `NOT_FOUND` when they don't contain the answer.
 7. **Serve.** An Express API (rate-limited, with a daily cap) and a React page that turns `[1]` markers into links.
 
@@ -50,21 +50,42 @@ Most of the work was making the data right. A few examples:
 - **Hidden text.** Multi-line MDX comments leaked text the live site never shows, including commented-out headings. They are now stripped before the page is split.
 - **Content that isn't in the file.** Pages include shared snippets (`<$Partial>`) and sample code (`<$CodeSample>`) rendered at build time. Resolving them added 96 partials and 38 code samples to the index.
 - **SDK-specific sections** (`<$Show if="sdk:dart">`) are kept with a visible `[sdk:dart]` label, so Python, Dart and C# answers don't blur together.
-- **Exact identifiers.** Vector search missed a page when queried with an exact setting name; hybrid search found it. Postgres treats `pgrst.db_plan_enabled` as one word, so dots become word breaks in both the index and the query.
+- **Hybrid search: built, measured, removed.** I added keyword search (merged with vector search by reciprocal rank fusion) because vector search once missed a page when queried with an exact setting name. When I compared the options on my tuning set, vector + re-rank scored better than hybrid + re-rank (MRR about 0.80 against 0.74), so I removed the keyword half to keep the system simpler.
 - **Re-ranking.** For one troubleshooting question, the section that explains the fix ranked 20th by vector similarity; re-ranking moved it to first.
 - **A faithfulness failure I found by checking an answer against the docs.** When only a bare bullet ("Call functions with `select`") was retrieved, the model once reversed it into "avoid calling functions with `select`". Tighter prompt rules reduced it, but the missing explanation was a retrieval problem, which is documented below as a limitation.
 - **Resilient embedding.** The loader caches every vector on disk, retries failed requests with backoff, and saves with upserts, so a flaky connection never means starting over.
+
+## Evaluation
+
+`src/eval.ts` checks retrieval: for each question, is the page a person would be sent to among the (up to 8) sources the answering model sees? "Found" means it is anywhere in those sources, "top 3" means it is in the first three, and "first" means it is the first one.
+
+I tuned the system on 17 questions, then ran it **once, unchanged**, on 10 new questions. Two of those were left out of the score because their expected pages are not in the index, leaving 8.
+
+| Question set | Method | Found | Top 3 | First |
+|---|---|---|---|---|
+| Tuning (17) | Vector only | 17/17 | 13/17 | 9/17 |
+| Tuning (17) | Vector + re-rank | 17/17 | 15/17 | 13/17 |
+| **Holdout (8)** | Vector only | 7/8 | 6/8 | 5/8 |
+| **Holdout (8)** | **Vector + re-rank (shipped)** | **7/8** | **6/8** | **6/8** |
+
+- **Treat the holdout as the honest number.** The tuning set was used to make design decisions, so its scores are optimistic.
+- **Re-ranking:** it clearly helped on the tuning set. On the holdout the difference is one question, so I can't claim a gain there. It fixed one question (SSR in Next.js, 5th to 1st) and hurt another (redirect URLs, 2nd to 5th).
+- **The expected page is a strict test.** Each question has one expected page (occasionally two). For every holdout answer, other pages also held relevant information, so a question can count as "not found" even when the system returned something useful.
+- **Answer correctness was not graded.** The scores above measure retrieval only. I did not check each answer against the docs for factual correctness.
+- **Refusals:** 3 out-of-scope questions, 3 correctly answered with "couldn't find that".
+- **Small samples:** with 8 questions, one question is 12.5 percentage points. Read these as indicative, not precise.
+- One tuning question (about Postgres error `42501`) was removed because its answer isn't in the Auth or Database guides, so the expected page was wrong.
 
 ## Limitations
 
 - **Scope:** only the Auth and Database guides, not the API reference or other sections.
 - **Not everything is indexed.** Some pages use components that generate their content when the page renders (for example error-code tables, provider lists, extension lists). That content isn't in the source files, so those pages are incomplete in the index.
 - **Link targets are dropped** from chunk text, so a bullet that only points to another section ("see X") gives the model nothing to explain. This is the cause of the misread above.
-- **It can still be wrong.** A small answering model can misread thin sources. Always check the linked sections.
-- **Keyword search needs every word to match,** so natural-language questions rely on the vector half; exact terms and identifiers rely on the keyword half.
+- **It can still be wrong.** Answer correctness has not been formally measured, and a small answering model can misread thin sources. Always check the linked sections.
+- **Retrieval is imperfect.** Some questions return a related page instead of the exact one (a question about deleting a user's posts on account deletion did not find the cascade-deletes page), and re-ranking can push the right page down when several pages cover similar ground.
+- **Vector search only.** Exact identifiers and error codes rely on the embedding to match. Hybrid search did not help on my tuning set, so I removed it.
 - **A snapshot, not live.** Answers reflect the docs as of the last indexing run.
 - **Free hosting:** cold starts of up to a minute, and a daily ping keeps the free database from pausing.
-- **Evaluation is unfinished.** `src/eval.ts` scores retrieval against a hand-written question set, but several of my "expected pages" turned out not to be in the index, so I'm cleaning the set before quoting a number.
 
 ## Run it yourself
 
@@ -106,6 +127,13 @@ npx tsx src/server.ts            # API on http://localhost:3001
 cd web && npm run dev            # page on http://localhost:5173
 ```
 
+**6. Run the evaluation (optional):**
+
+```bash
+npx tsx src/eval.ts                      # tuning set
+npx tsx src/eval.ts eval/holdout.json    # holdout set
+```
+
 ### Configuration
 
 | Variable | Needed | Purpose |
@@ -132,8 +160,9 @@ src/
   app.ts, server.ts, rate-limit.ts                 the API
   ask.ts                                           command-line question
   eval-lib.ts, eval.ts                             retrieval evaluation
+eval/                                              tuning, holdout and out-of-scope questions
 web/                                               React + Vite + Tailwind page
-sql/schema.sql                                     table, search functions, security settings
+sql/schema.sql                                     table, vector search function, security settings
 render.yaml, .github/workflows/keepalive.yml       deployment and daily keep-alive
 ```
 
@@ -143,11 +172,17 @@ The page (a static site) and the API (a web service) both run on Render and are 
 
 ## Roadmap
 
-- Finish the evaluation set and publish retrieval scores.
+- Grade answer correctness, not just retrieval, on a larger holdout set.
+- Allow more than one acceptable page per question in the evaluation.
 - Keep link targets in chunk metadata so "see X" pointers can be followed.
 - Stream answers as they are written.
 - Let visitors pick their SDK and show only that language's code.
 - Add automated tests and CI.
+
+## License
+
+Released under the [MIT License](LICENSE). Supabase documentation content remains
+the property of Supabase and is not covered by this license.
 
 ## Acknowledgements
 

@@ -22,10 +22,8 @@ export function buildPrompt(question: string, sources: Match[]): string {
   return `Question: ${question}\n\nSources:\n\n${blocks.join('\n\n---\n\n')}`
 }
 
-// True when the model said the sources do not contain the answer.
 export const isNotFound = (answer: string) => new RegExp(`^\\s*${NOT_FOUND}\\b`).test(answer)
 
-// Source numbers like [1] or [3] mentioned in the answer, ignoring numbers with no matching source.
 export function citedNumbers(answer: string, count: number): number[] {
   const found = new Set<number>()
   for (const m of answer.matchAll(/\[(\d+)\]/g)) {
